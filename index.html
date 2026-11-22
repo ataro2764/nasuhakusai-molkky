@@ -56,7 +56,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .hist{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:15px}
 
 /* stage */
-.stage{position:relative;width:min(100%, calc((100dvh - 250px) * 0.8));min-width:min(100%,300px);aspect-ratio:4/5;margin:0 auto;border:2.5px solid var(--ink);border-radius:20px;overflow:hidden;background:#8fc463;touch-action:none;user-select:none}
+.stage{position:relative;width:min(100%, calc((100dvh - 290px) * 0.8));min-width:min(100%,300px);aspect-ratio:4/5;margin:0 auto;border:2.5px solid var(--ink);border-radius:20px;overflow:hidden;background:#8fc463;touch-action:none;user-select:none}
 .stage canvas{display:block;width:100%;height:100%}
 .toast{position:absolute;left:50%;top:9%;transform:translate(-50%,0) scale(.9);background:var(--foam);border:2.5px solid var(--ink);border-radius:14px;padding:8px 16px;font-weight:900;font-size:18px;text-align:center;box-shadow:0 4px 0 var(--ink);opacity:0;transition:opacity .2s, transform .2s;pointer-events:none;width:max-content;max-width:92%;line-height:1.35}
 .toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
@@ -66,7 +66,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .iconBtn button{background:rgba(255,250,240,.92);border:2px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:12px}
 
 /* tray */
-.tray{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
+.tray{display:grid;grid-template-columns:1fr 104px;gap:10px;align-items:stretch}
+.tech{display:grid;grid-template-columns:repeat(3,1fr);border:2.5px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--foam)}
+.tech button{border:0;border-right:1.5px solid rgba(42,38,23,.18);border-bottom:1.5px solid rgba(42,38,23,.18);background:transparent;padding:5px 2px;font-size:13px;line-height:1.15;min-width:0}
+.tech button small{display:block;font-weight:700;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tech button[aria-pressed="true"]{background:var(--leaf);color:#fff}
+.tech button[aria-pressed="true"] small{color:#eef6e2}
+.tech button:disabled{cursor:default}
+@media (min-width:720px){.tech{grid-template-columns:repeat(6,1fr)}.tray{grid-template-columns:1fr 160px}}
 .arc{display:flex;border:2.5px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--foam);flex:1 1 180px}
 .arc button{flex:1;border:0;background:transparent;padding:8px 6px;font-size:14px;line-height:1.2}
 .arc button small{display:block;font-weight:700;font-size:11px;color:var(--muted)}
@@ -173,7 +180,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
           <li><b>ちょうど50点</b>で勝ち。50点を超えたら<b>25点に戻ります</b>。</li>
           <li>1本も倒せないとミス。<b>3回連続ミスで失格</b>（相手の勝ち）。</li>
         </ol>
-        <p class="note">操作：コートをタップ（ドラッグ）してナスの落下地点を決めます。投げるときはゲージを3回タップ（ボタン・スペースキーでも可）。<br>① スタート ② 100%の線で止めるとちょうど狙った距離 ③ 戻ってきたカーソルを左の紫ゾーンで止める（ミート）。早いと左へ、遅いと右へそれます。<br>ふわっと＝高く投げてあまり転がらない。ころがし＝低く投げて着地後によく滑る。</p>
+        <p class="note">操作：コートをタップ（ドラッグ）してナスの落下地点を決めます。投げるときはゲージを3回タップ（ボタン・スペースキーでも可）。<br>① スタート ② 100%の線で止めるとちょうど狙った距離 ③ 戻ってきたカーソルを左の紫ゾーンで止める（ミート）。早いと左へ、遅いと右へそれます。<br>技：ふわり（高く上げて奥を狙う）／下投げ（基本。滑らせる）／縦投げ（当たる幅がせまい。すき間の真ん中を狙う）／水平（当たる幅が広い。まとめて倒す）／カッサ（転がして右へ曲げ、横からかっさらう）／ステップ（強く投げて遠くへ飛ばす。ミートのズレが大きく響く）。</p>
         <button class="btn primary" type="button" data-close>とじる</button>
       </div>
     </div>
@@ -243,10 +250,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="g-cursor" id="gCursor"></div>
   </div>
   <div class="tray" id="tray">
-    <div class="arc" role="group" aria-label="投げ方">
-      <button type="button" id="arcHigh" aria-pressed="true">ふわっと<small>高く・止まる</small></button>
-      <button type="button" id="arcLow" aria-pressed="false">ころがし<small>低く・滑る</small></button>
-    </div>
+    <div class="tech" id="tech" role="group" aria-label="投げ方（技）"></div>
     <button class="throw" id="btnThrow" type="button" disabled>投げる</button>
   </div>
   <div class="hint" id="hint">コートをタップして狙いを決め、ゲージを3回タップして投げよう</div>
@@ -301,15 +305,27 @@ function ctr(p) {
   const s = Math.sin(p.tilt) * PIN_H * 0.5;
   return [p.x + Math.cos(p.dir) * s, p.z + Math.sin(p.dir) * s];
 }
+/* Throwing techniques. T: flight time for a distance, keep: speed kept on landing,
+   r / rg: contact half-width in the air / on the ground, m: weight behind the stick,
+   fric: ground friction, curve: turn rate while rolling (rad/s, + bends right), wild: how much a mistimed meet hurts. */
+const TECH = {
+  high:  { name: 'ふわり',   sub: '高く・止まる', desc: 'ふわりと高く上げて上から落とす。手前のピンを越えて奥のピンを狙える。', T: d => 0.78 + d * 0.09, keep: 0.28, r: EGG_R, rg: EGG_R, m: 1, fric: 5.5, curve: 0, wild: 1 },
+  low:   { name: '下投げ',   sub: '低く・滑る',   desc: '基本の下投げ。低く投げて、着地してから滑らせて当てる。', T: d => 0.40 + d * 0.07, keep: 0.6, r: EGG_R, rg: EGG_R, m: 1, fric: 5.5, curve: 0, wild: 1 },
+  tate:  { name: '縦投げ',   sub: '細く・すき間', desc: '棒を縦にして投げる。当たる幅がせまいので、両側にピンがある真ん中のピンだけを狙える。', T: d => 0.62 + d * 0.08, keep: 0.3, r: EGG_R * 0.45, rg: EGG_R * 0.55, m: 1, fric: 7, curve: 0, wild: 1.15 },
+  flat:  { name: '水平',     sub: '広く・まとめ', desc: '棒を横に寝かせて投げる。当たる幅が広く、並んだピンをまとめて倒しやすい。', T: d => 0.52 + d * 0.075, keep: 0.42, r: 0.17, rg: 0.16, m: 1, fric: 6.5, curve: 0, wild: 1 },
+  kassa: { name: 'カッサ',   sub: '転がし・曲がる', desc: '斜めに転がして横からかっさらう技。着地後に右へ曲がりながら転がる。狙いは少し左に。', T: d => 0.36 + d * 0.06, keep: 0.78, r: EGG_R, rg: 0.16, m: 1, fric: 3.4, curve: 1.6, wild: 1.1 },
+  step:  { name: 'ステップ', sub: '強く・飛ばす', desc: '踏み込んで強く投げる。ピンを遠くまで飛ばす（ブレイクや飛ばしに）。ミートのズレが大きく響く。', T: d => 0.30 + d * 0.05, keep: 0.7, r: EGG_R, rg: EGG_R, m: 1.8, fric: 5, curve: 0, wild: 1.5 },
+};
+const TECH_KEYS = ['high', 'low', 'tate', 'flat', 'kassa', 'step'];
 function launch(st, tx, tz, arc) {
+  const tk = TECH[arc] || TECH.high;
   const dist = Math.hypot(tx - REL.x, tz - REL.z);
-  const high = arc === 'high';
-  const T = high ? 0.78 + dist * 0.09 : 0.40 + dist * 0.07;
+  const T = tk.T(dist);
   st.egg = {
     x: REL.x, z: REL.z, h: REL.h,
     vx: (tx - REL.x) / T, vz: (tz - REL.z) / T, vh: (-REL.h + 0.5 * G * T * T) / T,
     air: true, stop: false, spin: 0, ang: Math.atan2(tz - REL.z, tx - REL.x),
-    keep: high ? 0.28 : 0.6
+    keep: tk.keep, r: tk.r, rg: tk.rg, m: tk.m, fr: tk.fric, curve: tk.curve, tech: TECH[arc] ? arc : 'high'
   };
 }
 function hit(st, a, ax, az, ma, ra, b) {
@@ -361,7 +377,9 @@ function step(st, dt) {
         st.ev && st.ev.push(['land', Math.hypot(e.vx, e.vz), e]);
       }
     } else if (!e.stop) {
-      fric(e, 5.5, dt); e.x += e.vx * dt; e.z += e.vz * dt;
+      fric(e, e.fr || 5.5, dt);
+      if (e.curve) { const sp = Math.hypot(e.vx, e.vz); if (sp > 0.05) { const a = Math.atan2(e.vz, e.vx) - e.curve * dt * Math.min(1, sp); e.vx = Math.cos(a) * sp; e.vz = Math.sin(a) * sp; e.ang = a; } }
+      e.x += e.vx * dt; e.z += e.vz * dt;
       if (Math.hypot(e.vx, e.vz) < 0.02) { e.vx = e.vz = 0; e.stop = true; }
     }
     if (!e.air) bound(e);
@@ -372,7 +390,7 @@ function step(st, dt) {
     if (p.tilt < HALF) p.tilt = Math.min(HALF, p.tilt + dt * 8);
     bound(p);
   }
-  if (e) for (const p of P) { if (e.h < (p.up ? PIN_H : 0.18)) hit(st, e, e.x, e.z, 1.0, EGG_R, p); }
+  if (e) for (const p of P) { if (e.h < (p.up ? PIN_H : 0.18)) hit(st, e, e.x, e.z, e.m || 1, e.air ? (e.r || EGG_R) : (e.rg || EGG_R), p); }
   for (let i = 0; i < P.length; i++) {
     const a = P[i]; if (a.up) continue;
     for (let j = 0; j < P.length; j++) {
@@ -398,10 +416,11 @@ function pointsFor(downs) { return downs.length === 1 ? downs[0] : downs.length;
 function gauss() { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); }
 function clampT(x, z) { return [Math.max(-2.2, Math.min(2.2, x)), Math.max(0.6, Math.min(7.6, z))]; }
 /* power: 1.0 = exactly the aimed distance. offset: 0 = perfect meet, + early (pulls left), - late (pushes right) */
-function shotFrom(tx, tz, power, offset) {
+function shotFrom(tx, tz, power, offset, arc) {
+  const wild = (TECH[arc] || TECH.high).wild;
   const dx = tx - REL.x, dz = tz - REL.z, d = Math.hypot(dx, dz);
-  const ang = Math.atan2(dz, dx) + offset * 1.0;
-  const dist = d * power * (1 - Math.min(0.5, Math.abs(offset) * 1.5));
+  const ang = Math.atan2(dz, dx) + offset * wild;
+  const dist = d * power * (1 - Math.min(0.5, Math.abs(offset) * 1.5 * wild));
   const s = 0.012 + 0.005 * d;
   return clampT(REL.x + Math.cos(ang) * dist + gauss() * s, REL.z + Math.sin(ang) * dist + gauss() * s);
 }
@@ -808,8 +827,9 @@ function drawEgg(c, e) {
   c.fillStyle = `rgba(25,45,10,${e.air ? 0.15 : 0.28})`; c.fill();
   const p = proj(e.x, e.h + 0.04, e.z);
   let ang;
-  if (e.air) ang = e.spin;
-  else { const a = proj(e.x, 0, e.z), b = proj(e.x + Math.cos(e.ang) * 0.1, 0, e.z + Math.sin(e.ang) * 0.1); ang = Math.atan2(b.y - a.y, b.x - a.x); }
+  const roll = e.tech === 'kassa' || e.tech === 'flat';
+  if (e.air) ang = e.tech === 'tate' ? -Math.PI / 2 + Math.sin(e.spin * 0.6) * 0.15 : e.tech === 'flat' ? Math.sin(e.spin * 0.4) * 0.08 : e.tech === 'kassa' ? -0.5 + Math.sin(e.spin) * 0.2 : e.spin;
+  else { const a = proj(e.x, 0, e.z), b = proj(e.x + Math.cos(e.ang) * 0.1, 0, e.z + Math.sin(e.ang) * 0.1); ang = Math.atan2(b.y - a.y, b.x - a.x) + (roll ? Math.PI / 2 : 0); }
   c.save(); c.translate(p.x, p.y); drawEggplant(c, EGG_L * 1.5 * p.s, ang); c.restore();
 }
 function drawAim(c, now) {
@@ -818,21 +838,24 @@ function drawAim(c, now) {
   groundEllipse(c, tx, tz, 0.12); c.fillStyle = 'rgba(255,250,240,.2)'; c.fill();
   c.setLineDash([5, 5]); c.lineWidth = 2; c.strokeStyle = 'rgba(255,250,240,.9)'; c.stroke(); c.setLineDash([]);
   groundEllipse(c, tx, tz, 0.05); c.fillStyle = '#5a2a83'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#fffaf0'; c.stroke();
-  // arc preview
+  // flight and roll preview: the real physics with no pins on the court
   const st = { pins: [], egg: null }; launch(st, tx, tz, game.arc);
-  const e = st.egg; c.fillStyle = 'rgba(255,250,240,.85)';
-  for (let t = 0, i = 0; e.air && i < 400; i++) {
-    e.vh -= G * DT; e.h += e.vh * DT; e.x += e.vx * DT; e.z += e.vz * DT;
-    if (e.h <= 0) break;
-    if (i % 6 === 0) { const p = proj(e.x, e.h, e.z); c.beginPath(); c.arc(p.x, p.y, Math.max(1.5, p.s * 0.012), 0, 7); c.fill(); }
+  const e = st.egg, roll = [];
+  c.fillStyle = 'rgba(255,250,240,.85)';
+  for (let i = 0; i < 600 && !e.stop; i++) {
+    const wasAir = e.air; step(st, DT);
+    if (wasAir && i % 6 === 0) { const p = proj(e.x, e.h, e.z); c.beginPath(); c.arc(p.x, p.y, Math.max(1.5, p.s * 0.012), 0, 7); c.fill(); }
+    if (!e.air && i % 3 === 0) roll.push(proj(e.x, 0, e.z));
   }
-  // slide hint for low throw
-  if (game.arc === 'low') {
-    const v = Math.hypot(e.vx, e.vz) * e.keep, d = v * v / (2 * 5.5), ux = e.vx / Math.hypot(e.vx, e.vz), uz = e.vz / Math.hypot(e.vx, e.vz);
-    const a = proj(tx, 0, tz), b = proj(tx + ux * d, 0, tz + uz * d);
-    c.setLineDash([3, 6]); c.strokeStyle = 'rgba(90,42,131,.8)'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); c.setLineDash([]);
+  if (roll.length > 1) {
+    c.setLineDash([3, 6]); c.strokeStyle = 'rgba(90,42,131,.85)'; c.lineWidth = 3;
+    c.beginPath(); roll.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.stroke(); c.setLineDash([]);
   }
+  // contact width marker at the landing point
+  const tk = TECH[game.arc] || TECH.high;
+  c.strokeStyle = 'rgba(255,250,240,.9)'; c.lineWidth = 3;
+  const l1 = proj(tx - tk.r * 1.6, 0.02, tz), l2 = proj(tx + tk.r * 1.6, 0.02, tz);
+  c.beginPath(); c.moveTo(l1.x, l1.y); c.lineTo(l2.x, l2.y); c.stroke();
 }
 
 /* ---------- audio ---------- */
@@ -915,10 +938,14 @@ class Game {
       const dx = p.x - REL.x, dz = p.z - REL.z, d = Math.hypot(dx, dz), ux = dx / d, uz = dz / d;
       for (const lat of lats) {
         for (const k of [-0.1, 0.02]) cands.push(['high', p.x + ux * k - uz * lat, p.z + uz * k + ux * lat]);
-        for (const k of [0.25, 0.5, 0.8, 1.1]) cands.push(['low', p.x - ux * k - uz * lat, p.z - uz * k + ux * lat]);
+        for (const k of [0.3, 0.6, 0.95]) cands.push(['low', p.x - ux * k - uz * lat, p.z - uz * k + ux * lat]);
+        cands.push(['tate', p.x - ux * 0.05 - uz * lat, p.z - uz * 0.05 + ux * lat]);
+        cands.push(['flat', p.x - ux * 0.15 - uz * lat, p.z - uz * 0.15 + ux * lat]);
+        for (const k of [0.8, 1.2]) cands.push(['kassa', p.x - ux * k + uz * 0.3 * k, p.z - uz * k - ux * 0.3 * k]);
+        if (diff !== 'easy') cands.push(['step', p.x - ux * 0.5, p.z - uz * 0.5]);
       }
     }
-    for (let i = 0; i < 16; i++) cands.push([Math.random() < 0.5 ? 'high' : 'low', -0.7 + Math.random() * 1.4, 2.6 + Math.random() * 1.8]);
+    for (let i = 0; i < 16; i++) cands.push([TECH_KEYS[Math.floor(Math.random() * TECH_KEYS.length)], -0.7 + Math.random() * 1.4, 2.6 + Math.random() * 1.8]);
     const val = downs => {
       const n = downs.length;
       if (n === 0) return pl.misses >= 2 ? -1000 : -14 - pl.misses * 18;
@@ -932,11 +959,12 @@ class Game {
     const scored = cands.map(([arc, x, z]) => {
       [x, z] = clampT(x, z);
       let sum = 0;
-      for (let i = 0; i < samples; i++) { const sw = cpuSwing(diff); const [jx, jz] = shotFrom(x, z, sw.power, sw.offset); sum += val(simulate(this.pins, jx, jz, arc)); }
+      for (let i = 0; i < samples; i++) { const sw = cpuSwing(diff); const [jx, jz] = shotFrom(x, z, sw.power, sw.offset, arc); sum += val(simulate(this.pins, jx, jz, arc)); }
       return { arc, x, z, v: sum / samples };
     }).sort((a, b) => b.v - a.v);
     const pick = diff === 'easy' ? scored[Math.floor(Math.random() * Math.min(6, scored.length))] : scored[0];
     pl.arc = pick.arc; pl.target = [pick.x, pick.z];
+    setHint(`${pl.name}は「${TECH[pick.arc].name}」で狙っています…`);
     syncControls();
     setTimeout(() => { if (game === this && this.phase === 'cpu') { this.plan = cpuSwing(diff); this.startGauge(); } }, 700);
   }
@@ -962,7 +990,7 @@ class Game {
   finishGauge(off) {
     const g = this.g; g.offset = off; g.stage = 3;
     const [tx, tz] = this.pl.target;
-    this.shot = shotFrom(tx, tz, g.power, off);
+    this.shot = shotFrom(tx, tz, g.power, off, this.pl.arc);
     if (this.mode === 'online') online.send({ shot: { gen: this.gen, seq: this.seq + 1, x: this.shot[0], z: this.shot[1], tx, tz, arc: this.pl.arc, power: g.power, offset: off } });
     this.beginThrow(g.power, off);
   }
@@ -1331,8 +1359,7 @@ function syncControls() {
   $('#btnThrow').disabled = !(can || swinging);
   $('#btnThrow').textContent = swinging ? (game.g.stage === 1 ? 'パワー！' : 'ミート！') : '投げる';
   const arc = game ? game.arc : 'high';
-  $('#arcHigh').setAttribute('aria-pressed', arc === 'high'); $('#arcLow').setAttribute('aria-pressed', arc === 'low');
-  $('#arcHigh').disabled = $('#arcLow').disabled = !can;
+  document.querySelectorAll('#tech button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.t === arc); b.disabled = !can; });
 }
 function newGame(mode) { leaveOnline(); game = new Game(mode); lastMode = mode; show(null); renderHUD(); syncControls(); }
 let lastMode = 'cpu';
@@ -1352,8 +1379,12 @@ cv.addEventListener('pointercancel', () => { dragging = false; });
 $('#btnThrow').addEventListener('pointerdown', ev => { ev.preventDefault(); audio(); if (game) game.press(); });
 $('#btnThrow').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); if (game) game.press(); } });
 $('#gauge').addEventListener('pointerdown', ev => { ev.preventDefault(); audio(); if (game) game.press(); });
-$('#arcHigh').addEventListener('click', () => { if (game && game.phase === 'aim') { game.pl.arc = 'high'; syncControls(); } });
-$('#arcLow').addEventListener('click', () => { if (game && game.phase === 'aim') { game.pl.arc = 'low'; syncControls(); } });
+TECH_KEYS.forEach(k => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.t = k; b.setAttribute('aria-pressed', k === 'high');
+  b.innerHTML = `${TECH[k].name}<small>${TECH[k].sub}</small>`; b.title = TECH[k].desc;
+  b.addEventListener('click', () => { if (game && game.phase === 'aim' && game.myTurn) { game.pl.arc = k; syncControls(); setHint(TECH[k].desc); } });
+  $('#tech').appendChild(b);
+});
 document.addEventListener('keydown', ev => {
   if (!game || (game.phase !== 'aim' && game.phase !== 'gauge') || game.pl.cpu) return;
   if (ev.key === ' ' || ev.key === 'Enter') { if (document.activeElement && document.activeElement.tagName === 'BUTTON' && document.activeElement.id !== 'btnThrow') return; ev.preventDefault(); if (!ev.repeat) game.press(); }
